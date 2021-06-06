@@ -8,21 +8,32 @@ import ipfs from './ipfs';
 class App extends React.Component {
     constructor(props){
         super(props);
-        this.handleFilePathChange = this.handleFilePathChange.bind(this);
+        this.handleFileChange = this.handleFileChange.bind(this);
         this.handleFileHashChange = this.handleFileHashChange.bind(this);
         this.handleUpload = this.handleUpload.bind(this);
         this.handleRetrieve = this.handleRetrieve.bind(this);
+        this.convertToBuffer = this.convertToBuffer.bind(this);
     }
 
     state = {
-        filePath: '',
+        fileBuffer: null,
         fileHash: '',
         uploadText: '',
         retrieveText: ''
     }
 
-    handleFilePathChange(event) {
-        this.setState({filePath: event.target.value});
+    handleFileChange(event) {
+        event.preventDefault();
+        const file = event.target.files[0];
+        let reader = new window.FileReader();
+        reader.readAsArrayBuffer(file);
+        reader.onloadend = () => this.convertToBuffer(reader);
+    }
+
+    async convertToBuffer(reader){
+        const buffer = await Buffer.from(reader.result);
+        this.setState({fileBuffer: buffer});
+        console.log(buffer);
     }
 
     handleFileHashChange(event) {
@@ -31,26 +42,23 @@ class App extends React.Component {
 
     async handleUpload(event) {
         event.preventDefault();
-        const resp = await fetch(this.state.filePath, {crossDomain: true});
-        const arrayBuffer = await resp.arrayBuffer();
-        console.log(arrayBuffer);
-        const resp2 = await ipfs.add(Buffer.from(arrayBuffer));
+        const resp2 = await ipfs.add(this.state.fileBuffer);
         this.setState({uploadText: `Uploaded with hash ${resp2[0].path}`});
     }
 
     async handleRetrieve(event) {
         event.preventDefault();
-        console.log(this.state.fileHash);
         const resp = await ipfs.get(`/ipfs/${this.state.fileHash}`);
-        console.log(resp);
+        let buffer = Buffer.from(resp[0].content);
+        console.log(buffer);
     }
 
     render() {
         return (
             <div>
                 <form onSubmit={this.handleUpload}>
-                    <label htmlFor='path'>Filepath to be uploaded: </label>
-                    <input type='text' name='path' id='path' onChange={this.handleFilePathChange}></input>
+                    <label htmlFor='path'>File to be uploaded: </label>
+                    <input type='file' name='path' id='path' onChange={this.handleFileChange}></input>
                     <button type='submit'>Upload</button>
                     <span>{this.state.uploadText}</span>
                 </form>
