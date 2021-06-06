@@ -19,7 +19,9 @@ class App extends React.Component {
         fileBuffer: null,
         fileHash: '',
         uploadText: '',
-        retrieveText: ''
+        retrieveText: '',
+        imgSrc: '',
+        showImg: false
     }
 
     handleFileChange(event) {
@@ -49,11 +51,19 @@ class App extends React.Component {
     async handleRetrieve(event) {
         event.preventDefault();
         const resp = await ipfs.get(`/ipfs/${this.state.fileHash}`);
-        let buffer = Buffer.from(resp[0].content);
+        let buffer = Buffer.from(resp[0].content).toString('base64');
+        const mimeType = 'image/png'; // e.g., image/png
+        this.setState({imgSrc: `data:image/png;base64,${buffer}`, showImg: true});
         console.log(buffer);
     }
 
     render() {
+        let image;
+        if (this.state.showImg) {
+            image = <img src={this.state.imgSrc}/>;
+        } else {
+            image = <></>
+        };
         return (
             <div>
                 <form onSubmit={this.handleUpload}>
@@ -68,6 +78,7 @@ class App extends React.Component {
                     <button type='submit'>Retrieve</button>
                     <span>{this.state.retrieveText}</span>
                 </form>
+                {image}
             </div>
         )
     }
